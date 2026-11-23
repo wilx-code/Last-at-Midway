@@ -2,16 +2,33 @@ namespace SpriteKind {
     export const weather = SpriteKind.create()
     export const ui = SpriteKind.create()
 }
+browserEvents.onWheel(function (dx, dy, dz) {
+    if (dy < 0) {
+        if (speed > 295) {
+            speed = 295
+        } else {
+            speed += 3
+        }
+    } else if (dy > 0) {
+        if (speed < 0) {
+            speed = 0
+        } else {
+            speed += -3
+        }
+    }
+})
 browserEvents.onMouseMove(function (x, y) {
     mousex = x
     mousey = y
 })
-let speed = 0
-let distance = 0
+let currentangle = 0
+let angeldiff = 0
+let targetanlge = 0
 let dg = 0
 let cloud: Sprite = null
 let mousey = 0
 let mousex = 0
+let speed = 0
 namespace userconfig {
     export const ARCADE_SCREEN_WIDTH = 240
     export const ARCADE_SCREEN_HEIGHT = 180                                                                     
@@ -63,7 +80,6 @@ actualmouse.setFlag(SpriteFlag.Invisible, true)
 tiles.setCurrentTilemap(tilemap`level1`)
 scene.cameraFollowSprite(airplane)
 scene.setBackgroundImage(assets.image`sky`)
-scroller.scrollBackgroundWithSpeed(-50, 0)
 game.onUpdateInterval(randint(1000, 1500), function () {
     for (let index = 0; index < randint(0, 3); index++) {
         cloud = sprites.create(img`
@@ -182,16 +198,32 @@ game.onUpdateInterval(randint(1000, 1500), function () {
         }
         cloud.setPosition(randint(0, 240), randint(0, 180))
         cloud.vx = randint(-50, -100)
+        cloud.setFlag(SpriteFlag.AutoDestroy, true)
     }
 })
 forever(function () {
     dg = spriteutils.angleFrom(airplane, actualmouse)
-    distance = spriteutils.distanceBetween(airplane, actualmouse)
-    pointer.setPosition(0 + (airplane.x + distance * Math.cos(dg)), 0 + (airplane.y + distance * Math.sin(dg)))
+    pointer.setPosition(0 + (airplane.x + 70 * Math.cos(dg)), 0 + (airplane.y + 70 * Math.sin(dg)))
     transformSprites.rotateSprite(pointer, spriteutils.radiansToDegrees(dg))
-    speed = spriteutils.distanceBetween(airplane, pointer)
-    airplane.vx = speed
+    targetanlge = spriteutils.radiansToDegrees(dg)
+    angeldiff = targetanlge - currentangle
+    if (angeldiff < -180) {
+        angeldiff += 360
+    }
+    if (angeldiff > 180) {
+        currentangle += -360
+    }
+    if (angeldiff > 3) {
+        currentangle += 2
+    } else if (angeldiff < -3) {
+        currentangle += -2
+    } else {
+        currentangle = targetanlge
+    }
+    transformSprites.rotateSprite(airplane, currentangle)
+    spriteutils.setVelocityAtAngle(airplane, spriteutils.degreesToRadians(currentangle), speed)
 })
 forever(function () {
     actualmouse.setPosition(scene.cameraProperty(CameraProperty.Left) + mousex, scene.cameraProperty(CameraProperty.Top) + mousey)
+    scroller.scrollBackgroundWithSpeed(0 - speed, 0)
 })
